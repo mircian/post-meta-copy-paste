@@ -60,6 +60,9 @@ class PMCP_Main {
 	 */
 	public function hooks() {
 		add_action( 'add_meta_boxes', array( $this, 'add_meta_box' ) );
+
+		// Run this as early as possible to allow other plugins to modify the meta as needed.
+		add_action( 'save_post', array( $this, 'maybe_update_post_meta' ), 0, 3 );
 	}
 
 	/**
@@ -112,6 +115,47 @@ class PMCP_Main {
 		</p>
 		<p class="description"><?php esc_html_e( 'Checking this box will update all your custom fields based on the value above when you save/update the post.', 'pmcp' ); ?></p>
 		<?php
+		wp_nonce_field( 'pmcp_bulk_edit', 'pmcp_nonce' );
+
+	}
+
+	/**
+	 * If the checkbox is checked, attempt to update all the post meta with the values in the textarea.
+	 *
+	 * @param int     $post_ID Post ID.
+	 * @param WP_Post $post Post object.
+	 * @param bool    $update Whether this is an existing post being updated or not.
+	 */
+	public function maybe_update_post_meta( $post_ID, $post, $update ) {
+
+		// Don't do anything if the checkbox is not checked.
+		if ( ! isset( $_POST['pmcp_update'] ) ) {
+			return;
+		}
+		// Check if the nonce is valid.
+		if ( isset( $_POST['pmcp_nonce'] ) && wp_verify_nonce( sanitize_text_field( wp_unslash( $_POST['pmcp_nonce'] ) ), 'pmcp_bulk_edit' ) ) {
+
+			$bulk_meta = isset( $_POST['pmcp_bulk_meta'] ) ? json_decode( sanitize_textarea_field( wp_unslash( $_POST['pmcp_bulk_meta'] ) ), true ) : array();
+
+			if ( ! empty( $bulk_meta ) ) {
+				foreach ( $bulk_meta as $meta_key => $meta_value ) {
+					if ( is_array( $meta_value ) ) {
+						// Delete existing post meta with this key to prevent duplicate values.
+						delete_post_meta( $post_ID, $meta_key );
+						foreach ( $meta_value as $value ) {
+							add_post_meta( $post_ID, $meta_key, $value );
+						}
+						continue;
+					}
+					if ( is_serialized( $meta_value ) ) {
+						$meta_value = maybe_unserialize( $meta_value );
+						update_post_meta( $post_ID, $meta_key, $meta_value );
+						continue;
+					}
+					update_post_meta( $post_ID, $meta_key, $meta_value );
+				}
+			}
+		}
 
 	}
 
