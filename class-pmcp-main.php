@@ -61,8 +61,10 @@ class PMCP_Main {
 	public function hooks() {
 		add_action( 'add_meta_boxes', array( $this, 'add_meta_box' ) );
 
-		// Run this later so values from plugins like ACF are also updated.
-		add_action( 'save_post', array( $this, 'maybe_update_post_meta' ), 9999 );
+		// Run this as early as possible to allow other plugins to modify the meta as needed.
+		add_action( 'save_post', array( $this, 'maybe_update_post_meta' ), 0 );
+
+		add_action( 'admin_notices', array( $this, 'maybe_suggest_another_update' ) );
 	}
 
 	/**
@@ -110,8 +112,8 @@ class PMCP_Main {
 			<textarea class="widefat" name="pmcp_bulk_meta" id="pmcp_bulk_meta" rows="10"><?php echo wp_json_encode( $post_meta ); ?></textarea>
 		</p>
 		<p class="label">
-			<label><?php esc_html_e( 'Update all meta?', 'pmcp' ); ?>
-				<input type="checkbox" name="pmcp_update" value="1"/></label>
+			<label><input type="checkbox" name="pmcp_update" value="1"/><?php esc_html_e( 'Update all meta?', 'pmcp' ); ?>
+			</label>
 		</p>
 		<p class="description"><?php esc_html_e( 'Checking this box will update all your custom fields based on the value above when you save/update the post.', 'pmcp' ); ?></p>
 		<?php
@@ -156,8 +158,24 @@ class PMCP_Main {
 					update_post_meta( $post_ID, $meta_key, $meta_value );
 				}
 			}
+
+			/*
+			 * Prevent plugins from making changes to the updated values in this run & add notice to suggest another save.
+			 * This shouldn't be a problem considering that values are copied from another post and the date should be
+			 * already processed. The suggestion to update again is to make sure plugins run other possible connections
+			 * based on meta.
+			 */
+			remove_all_actions( 'save_post' );
+
+			add_filter( 'redirect_post_location', array( $this, 'add_notice_query_var' ), 99 );
 		}
 
+	}
+
+	public function add_notice_query_var( $location ) {
+		remove_filter( 'redirect_post_location', array( $this, 'add_notice_query_var' ), 99 );
+
+		return add_query_arg( array( 'pmcp' => '1' ), $location );
 	}
 
 	/**
@@ -175,6 +193,20 @@ class PMCP_Main {
 			'_edit_lock',
 		) ), true );
 
+	}
+
+	/**
+	 * Show a notice suggesting to update the post again.
+	 */
+	public function maybe_suggest_another_update() {
+		if ( ! isset( $_GET['pmcp'] ) ) {
+			return;
+		}
+		?>
+		<div class="notice notice-info is-dismissible">
+			<p><?php esc_html_e( 'All meta fields were updated, please update the post/page again ( without checking "Update all meta?" ) to allow plugins to run their actions!', 'pmcp' ); ?></p>
+		</div>
+		<?php
 	}
 
 }
