@@ -61,8 +61,8 @@ class PMCP_Main {
 	public function hooks() {
 		add_action( 'add_meta_boxes', array( $this, 'add_meta_box' ) );
 
-		// Run this as early as possible to allow other plugins to modify the meta as needed.
-		add_action( 'save_post', array( $this, 'maybe_update_post_meta' ), 0, 3 );
+		// Run this later so values from plugins like ACF are also updated.
+		add_action( 'save_post', array( $this, 'maybe_update_post_meta' ), 9999 );
 	}
 
 	/**
@@ -122,11 +122,9 @@ class PMCP_Main {
 	/**
 	 * If the checkbox is checked, attempt to update all the post meta with the values in the textarea.
 	 *
-	 * @param int     $post_ID Post ID.
-	 * @param WP_Post $post Post object.
-	 * @param bool    $update Whether this is an existing post being updated or not.
+	 * @param int $post_ID Post ID.
 	 */
-	public function maybe_update_post_meta( $post_ID, $post, $update ) {
+	public function maybe_update_post_meta( $post_ID ) {
 
 		// Don't do anything if the checkbox is not checked.
 		if ( ! isset( $_POST['pmcp_update'] ) ) {
