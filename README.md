@@ -2,6 +2,8 @@
 
 WordPress plugin which adds the option to bulk copy-paste a post's meta.
 
+A regular use case for this is when deploying new fields from staging to production to get the new data deployed faster and with less chances of breaking something.
+
 
 ## Getting Started
 
