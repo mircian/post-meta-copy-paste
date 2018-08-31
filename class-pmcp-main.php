@@ -65,6 +65,8 @@ class PMCP_Main {
 		add_action( 'save_post', array( $this, 'maybe_update_post_meta' ), 0 );
 
 		add_action( 'admin_notices', array( $this, 'maybe_suggest_another_update' ) );
+
+		add_filter( 'removable_query_args', array( $this, 'make_query_arg_removable' ) );
 	}
 
 	/**
@@ -175,7 +177,7 @@ class PMCP_Main {
 	public function add_notice_query_var( $location ) {
 		remove_filter( 'redirect_post_location', array( $this, 'add_notice_query_var' ), 99 );
 
-		return add_query_arg( array( 'pmcp' => '1' ), $location );
+		return add_query_arg( array( 'pmcp_message' => '1' ), $location );
 	}
 
 	/**
@@ -199,7 +201,7 @@ class PMCP_Main {
 	 * Show a notice suggesting to update the post again.
 	 */
 	public function maybe_suggest_another_update() {
-		if ( ! isset( $_GET['pmcp'] ) ) {
+		if ( ! isset( $_GET['pmcp_message'] ) ) {
 			return;
 		}
 		?>
@@ -207,6 +209,20 @@ class PMCP_Main {
 			<p><?php esc_html_e( 'All meta fields were updated, please update the post/page again ( without checking "Update all meta?" ) to allow plugins to run their actions!', 'pmcp' ); ?></p>
 		</div>
 		<?php
+	}
+
+	/**
+	 * Add our query arg to the list of removable query args to prevent confusion on edit screens.
+	 *
+	 * @param array $removable The current query args.
+	 *
+	 * @return array
+	 */
+	public function make_query_arg_removable( $removable ) {
+
+		$removable[] = 'pmcp_message';
+
+		return $removable;
 	}
 
 }
