@@ -139,6 +139,9 @@ class PMCP_Main {
 
 			if ( ! empty( $bulk_meta ) ) {
 				foreach ( $bulk_meta as $meta_key => $meta_value ) {
+					if ( $this->is_excluded_meta( $meta_key ) ) {
+						continue;
+					}
 					if ( is_array( $meta_value ) ) {
 						// Delete existing post meta with this key to prevent duplicate values.
 						delete_post_meta( $post_ID, $meta_key );
@@ -156,6 +159,23 @@ class PMCP_Main {
 				}
 			}
 		}
+
+	}
+
+	/**
+	 * Some meta should be excluded, also allow plugins to exclude their meta keys.
+	 *
+	 * @param string $meta_key The meta key to check.
+	 *
+	 * @return bool
+	 */
+	public function is_excluded_meta( $meta_key ) {
+
+		// This filter allows other plugins to add their meta to the list of meta which won't be updated by this plugin.
+		return in_array( $meta_key, apply_filters( 'pmcp_excluded_meta', array(
+			'_edit_last',
+			'_edit_lock',
+		) ), true );
 
 	}
 
