@@ -174,6 +174,13 @@ class PMCP_Main {
 
 	}
 
+	/**
+	 * Add the notice query var when redirecting after save_post.
+	 *
+	 * @param string $location The location to redirect to.
+	 *
+	 * @return string
+	 */
 	public function add_notice_query_var( $location ) {
 		remove_filter( 'redirect_post_location', array( $this, 'add_notice_query_var' ), 99 );
 
