@@ -159,17 +159,19 @@ class PMCP_Main {
 					}
 					update_post_meta( $post_ID, $meta_key, $meta_value );
 				}
+
+				/*
+				 * Prevent plugins from making changes to the updated values in this run & add notice to suggest another save.
+				 * This shouldn't be a problem considering that values are copied from another post and the date should be
+				 * already processed. The suggestion to update again is to make sure plugins run other possible connections
+				 * based on meta.
+				 */
+				remove_all_actions( 'save_post' );
+
+				add_filter( 'redirect_post_location', array( $this, 'add_notice_query_var' ), 99 );
+			} else {
+				add_filter( 'redirect_post_location', array( $this, 'add_error_notice_query_var' ), 99 );
 			}
-
-			/*
-			 * Prevent plugins from making changes to the updated values in this run & add notice to suggest another save.
-			 * This shouldn't be a problem considering that values are copied from another post and the date should be
-			 * already processed. The suggestion to update again is to make sure plugins run other possible connections
-			 * based on meta.
-			 */
-			remove_all_actions( 'save_post' );
-
-			add_filter( 'redirect_post_location', array( $this, 'add_notice_query_var' ), 99 );
 		}
 
 	}
@@ -185,6 +187,19 @@ class PMCP_Main {
 		remove_filter( 'redirect_post_location', array( $this, 'add_notice_query_var' ), 99 );
 
 		return add_query_arg( array( 'pmcp_message' => '1' ), $location );
+	}
+
+	/**
+	 * Add error notice query var when redirecting after save_post.
+	 *
+	 * @param string $location The location to redirect to.
+	 *
+	 * @return string
+	 */
+	public function add_error_notice_query_var( $location ) {
+		remove_filter( 'redirect_post_location', array( $this, 'add_error_notice_query_var' ), 99 );
+
+		return add_query_arg( array( 'pmcp_message' => '2' ), $location );
 	}
 
 	/**
@@ -211,9 +226,24 @@ class PMCP_Main {
 		if ( ! isset( $_GET['pmcp_message'] ) ) {
 			return;
 		}
+
+		$message = intval( $_GET['pmcp_message'] );
+		switch ( $message ) {
+			case 1:
+				$class        = 'notice-info';
+				$message_text = __( 'All meta fields were updated, please update the post/page again ( without checking "Update all meta?" ) to allow plugins to run their actions!', 'pmcp' );
+				break;
+			case 2:
+				$class        = 'notice-error';
+				$message_text = __( 'No fields were updated, please make sure the JSON is valid.', 'pmcp' );
+				break;
+		}
+		if ( ! isset( $class ) || ! isset( $message_text ) ) {
+			return;
+		}
 		?>
-		<div class="notice notice-info is-dismissible">
-			<p><?php esc_html_e( 'All meta fields were updated, please update the post/page again ( without checking "Update all meta?" ) to allow plugins to run their actions!', 'pmcp' ); ?></p>
+		<div class="notice is-dismissible <?php echo esc_attr( $class ); ?>">
+			<p><?php echo esc_html( $message_text ); ?></p>
 		</div>
 		<?php
 	}
