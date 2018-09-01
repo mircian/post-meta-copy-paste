@@ -2,7 +2,6 @@
 
 WordPress plugin which adds the option to bulk copy-paste a post's meta.
 
-
 ## Getting Started
 
 The plugin adds a simple metabox from which you can copy all of a post's meta. Paste that value in another post in the same metabox, check the "Update all meta?" checkbox and save/update.
